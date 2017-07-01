@@ -23,60 +23,56 @@ app.use(session({
   saveUninitialized: false
 }));
 
-let users = [{username: "zachary", password: "password"}];
-let messages = [];
+let errorMessages = [];
+let users = [{username: "Zachary", password: "password"}];
 
-app.get("/", function(req, res) {
-  if (req.session.username) {
-    res.redirect("/user");
-  } else {
-    res.render("index");
-  }
+app.get("/", function(req, res){
+  if(req.session.username){
+    res.render("index", {username: req.session.username});
+  } else{
+  res.redirect("/login");
+}
 });
 
-app.get("/login", function(req, res) {
-  res.render("login");
+app.get("/login", function(req, res){
+  res.render("login", {errors: errorMessages});
+  errorMessages = [];
 });
 
-app.post("/login", function(req, res) {
+app.post("/login", function(req, res){
   let loggedUser;
-  messages = [];
-
   users.forEach(function(user){
-    if (user.username === req.body.username) {
-      loggedUser = user;
-    }
-  });
+      if (user.username === req.body.username) {
+        loggedUser = user;
+      } else {
+        loggedUser = [{
+          username: "",
+          password: ""
+        }]
+      }
+    });
 
-  req.checkBody("username", "Please Enter a valid username.").notEmpty().isLength({min: 6, max: 20});
-  req.checkBody("password", "Please Enter a Password.").notEmpty();
+  req.checkBody("username", "Invalid Username Entered").notEmpty();
+  req.checkBody("password", "Invalid Password Entered").notEmpty();
+  req.checkBody("password", "Invalid password and username combination.").equals(loggedUser.password);
 
   let errors = req.validationErrors();
 
-  if (errors) {
-    errors.forEach(function(error) {
-      messages.push(error.msg);
+  if(errors) {
+    errors.forEach(function(error){
+      errorMessages.push(error.msg);
     });
-    res.render("login", {errors: messages});
+    res.redirect("/login")
   } else {
 
     req.session.username = req.body.username;
-
-    res.redirect("/user");
+    res.redirect("/");
   }
-
-  res.redirect("/user");
 });
 
-app.get("/logout", function(req, res) {
-    console.log("logging out!");
-    req.logout();
-    req.session.destroy();
-    res.redirect('/');
-});
-
-app.get("/user", function(req, res) {
-  res.render("user", {username: req.session.username});
+app.post("/logout", function(req, res){
+  req.session.destroy();
+  res.redirect("/login");
 });
 
 app.listen(7123, function() {
